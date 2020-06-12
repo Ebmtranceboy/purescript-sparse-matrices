@@ -1,22 +1,23 @@
 {
-  "name": "purescript-sparse-matrices",
+  "name": "purescript-cartesian",
   "license": "MIT",
   "ignore": [
     "**/.*",
     "node_modules",
     "bower_components",
-    "output"
-  ],    
-  "repository": {
+    "output",
+    ".DS_Store"
+  ],
+      "repository": {
       "type": "git",
-      "url": "https://github.com/Ebmtranceboy/purescript-sparse-matrices.git"
+      "url": "https://github.com/Ebmtranceboy/purescript-cartesian.git"
     },
 
   "dependencies": {
     "purescript-prelude": "^4.1.1",
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
-    "purescript-sparse-polynomials": "^1.0.3"
+    "purescript-integers": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

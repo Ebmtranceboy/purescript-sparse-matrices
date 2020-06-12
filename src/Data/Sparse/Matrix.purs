@@ -146,6 +146,10 @@ transpose a@(Matrix m) =
         | otherwise = f (i+1) j ((a??[i,j])^j^i ~ b)
    in f 0 0 $ Matrix {height: m.width, width: m.height, coefficients: zero}
 
+trace :: forall a. Eq a => Semiring a => Matrix a -> a
+trace a@(Matrix m) = sum $ (\i -> a??[i,i]) <$> 0..(m.width-1)
+  
+
 instance semiringMatrix :: (Eq a, Semiring a) => 
   Semiring (Matrix a) where
   add (Matrix a) (Matrix b) = 
@@ -223,7 +227,7 @@ type Square a = Matrix a
 type Vector a = Matrix a
 
 -- | Identity matrix
-eye :: forall a. Eq a => Semiring a => Int -> Matrix a
+eye :: forall a. Eq a => Semiring a => Int -> Square a
 eye n = 
   let cs 0 = []
       cs k = one^(k-1)^(k-1) : cs (k-1)

@@ -3,7 +3,7 @@ module Test.Main where
 import Prelude
 import Effect (Effect)
 import Data.Sparse.Matrix(Matrix(..),(??),(~),(~+),(~*)
-                          ,determinant,eye,transpose)
+                          ,determinant,eye,transpose,trace)
 import Data.Sparse.Polynomial((^))
 -- import Data.Complex(Cartesian, i, magnitudeSquared)
 import Data.Ratio(Ratio, (%))
@@ -33,6 +33,7 @@ main = do
     mat2 ?? [0,0] == 7 && ( 8^0^0 ~+ mat2) ?? [0,0] == 15 
   assert "matrix element scale" $ 
     mat3 ?? [0,0] == 2%1 && ( (1%4)^0^0 ~* mat3) ?? [0,0] == 1%2 
+  assert "matrix trace" $ trace mat3 == 10%1
   assert "matrix sum" $ (mat3 + mat4) ?? [2,2] == 14%1
   assert "matrix difference" $ (mat3 - mat4) ?? [2,2] == -4%1
   let m@(Matrix mat12) = mat1 * mat2
