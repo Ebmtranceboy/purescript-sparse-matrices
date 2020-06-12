@@ -1,14 +1,17 @@
 module Data.Sparse.Matrix(module Data.Sparse.Matrix) where
 
 import Prelude
-import Data.Sparse.Polynomial(Polynomial(..),(?))
+import Data.Sparse.Polynomial(Polynomial(..),(?),roots)
 import Data.Sparse.Polynomial(monoPol) as Poly
 import Data.Maybe(Maybe(..),fromMaybe,maybe)
 import Data.Map(Map,toUnfoldable, fromFoldable, keys)
 import Data.Foldable(foldr,sum,product)
+import Data.FoldableWithIndex (foldrWithIndex)
 import Data.Array((..),(:))
 import Data.Tuple(Tuple(..))
 import Data.Set(findMin)
+import Data.Int (toNumber)
+import Data.Complex (Cartesian, real)
 
 -- | Imported from Data.Sparse.Polynomial
 monoPol :: forall a. a -> Int -> Polynomial a
@@ -284,6 +287,57 @@ determinant :: forall a. Eq a => Semiring a => Ring a => EuclideanRing a =>
 determinant a@(Matrix m) =
   let {l,u} = lu a
    in product $ map (\i -> u??[i,i]) $ 0..(m.width-1)
+
+-- | Characteristic polynomial of a real square matrix
+faddeev :: Square Number -> Polynomial Number
+faddeev a =
+  let n = height a
+      go 0 _ _ p = p
+      go i m c p =
+        let k = n - i + 1
+            am = a * m + ((_ * c) <$> eye n)
+            coef = - trace (a * am) / toNumber k
+        in go (i-1) am coef (p + coef^(i-1))
+  in go n (Matrix {height: n, width: n, coefficients: zero}) 1.0 (1.0^n)
+
+-- | Eigen vlaues of a real square matrix
+eigenValues :: Square Number -> Array (Cartesian Number)
+eigenValues = roots <<< faddeev
+
+-- | Integer power of a square matrix
+pow :: forall a. Eq a => Semiring a => Square a -> Int -> Square a
+pow m 0 = eye (height m)
+pow m i = m * pow m (i-1)
+
+-- | Polynomial application
+applyPoly :: forall a. Eq a => Semiring a => Polynomial (Square a) -> Square a -> Square a
+applyPoly (Poly coeffs) m =
+   foldrWithIndex (\i v acc -> acc + v * pow m i) zero coeffs
+
+type Symmetric = Square Number
+
+-- | Square real matrix diagonalization such that m = vec * val * recip vec
+diagonalize :: Symmetric -> { val :: Symmetric, vec :: Square Number}
+diagonalize m =
+  let n = height m
+      vs = real <$> eigenValues m
+      toMatrix p = Matrix { height: n
+                  , width: n
+                  , coefficients: p
+                  }
+      val = toMatrix 
+            $ foldrWithIndex (\i v acc -> acc + v^i^i) 
+                            zero 
+                            vs
+      fromCst c = (_ * c) <$> eye n
+      pol = faddeev m
+      f v j =
+        let p = fromCst <$> pol / ((-v)^0+1.0^1)
+            b = applyPoly p m 
+          in b * (toMatrix $ foldr (\i acc -> acc + (toNumber i)^i^j) zero $ 0..(n-1))
+      vec = foldrWithIndex (\j v acc -> acc + f v j) (toMatrix zero) vs
+  in {val, vec}
+  
 
 -- | Solves the system Ax=B for x, for A square inversible and any B
 luSolve :: forall a. Eq a => Semiring a => Ring a => EuclideanRing a =>

@@ -3,10 +3,11 @@ module Test.Main where
 import Prelude
 import Effect (Effect)
 import Data.Sparse.Matrix(Matrix(..),(??),(~),(~+),(~*)
-                          ,determinant,eye,transpose,trace)
+                          ,determinant,eye,transpose,trace,diagonalize)
 import Data.Sparse.Polynomial((^))
 -- import Data.Complex(Cartesian, i, magnitudeSquared)
 import Data.Ratio(Ratio, (%))
+import Effect.Console(log)
 
 foreign import assert :: String -> Boolean -> Effect Unit
 
@@ -42,3 +43,5 @@ main = do
                          && m ?? [2,0] == 89
   assert "square matrix determinant" $ determinant mat4 == 36%1 
   assert "square matrix inversion" $ mat3 * recip mat3 == eye 3
+  let {val, vec} = diagonalize $ Matrix {height: 2, width: 2, coefficients: 1.0^0^0+2.0^0^1+3.0^1^0+4.0^1^1}
+  log $ show $ vec * val * recip vec
