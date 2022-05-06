@@ -117,17 +117,19 @@ instance showMatrix :: (Show a, Semiring a, Eq a) =>
         isDefaultJ j = m.width > 6 && j == 3
         isHidI i = m.height > 6 && i > 3 && i < m.height - 3
         isHidJ j = m.width > 6 && j > 3 && j < m.width - 3
-        showElem e i j = case unit of
-          unit | isEndOfLine j && not (isHidI i) 
-                               && not (isDefaultI i) -> 
+        showElem e i j = next
+          where
+          next
+            | isEndOfLine j && not (isHidI i) 
+                               && not (isDefaultI i) =
                                  " " <> show e <> "\n"
-               | isEndOfLine j && isDefaultI i -> "\n"
-               | isDefaultI i && isDefaultJ j -> ""
-               | isDefaultI i -> " ."
-               | isHidI i -> ""
-               | isDefaultJ j -> " . . ."
-               | isHidJ j -> ""
-               | otherwise -> " " <> show e
+            | isEndOfLine j && isDefaultI i = "\n"
+            | isDefaultI i && isDefaultJ j = ""
+            | isDefaultI i = " ."
+            | isHidI i = ""
+            | isDefaultJ j = " . . ."
+            | isHidJ j = ""
+            | otherwise = " " <> show e
       in foldr (<>) "" $ map (\i -> 
            foldr (<>) "" $ map (\j -> 
              showElem (mt ?? [i, j]) i j) 
@@ -285,7 +287,7 @@ lu a =
 determinant :: forall a. Eq a => Semiring a => Ring a => EuclideanRing a =>
   Square a -> a
 determinant a@(Matrix m) =
-  let {l,u} = lu a
+  let { l: _l, u } = lu a
    in product $ map (\i -> u??[i,i]) $ 0..(m.width-1)
 
 -- | Characteristic polynomial of a real square matrix
