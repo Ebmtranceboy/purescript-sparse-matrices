@@ -1,3 +1,3 @@
-#!/usr/bin/env node
+import { main } from 'file:///home/joel/Documents/purescript/purescript-sparse-matrices/output/Test.Main/index.js'
 
-require('../output/Test.Main').main()
+main()
