@@ -5,7 +5,7 @@ import Effect (Effect)
 import Data.Number (abs)
 import Data.Sparse.Matrix 
   ( Matrix(..)
-  , (??)
+  , (!!)
   , (~)
   , (~+)
   , (~*)
@@ -62,26 +62,26 @@ sym = 1.0^0^0 + 2.0^0^1 + 3.0^0^2
     + 3.0^2^0 + 6.0^2^1 + 9.0^2^2
       
 mat5 :: Matrix Number
-mat5 = Matrix { height:3, width:3, coefficients: sym }
+mat5 = Matrix { height: 3, width: 3, coefficients: sym }
 
 type P3 = Polynomial (Polynomial (Polynomial (Ratio Int)))
 
 main :: Effect Unit
 main = do
-  assert' "matrix transpose" $ (transpose mat1)??[1,0] == 2
+  assert' "matrix transpose" $ (transpose mat1)!![1,0] == 2
   assert' "matrix replacement" $ 
-    mat2 ?? [0,0] == 7 && ( 8^0^0 ~ mat2) ?? [0,0] == 8 
+    mat2 !! [0,0] == 7 && ( 8^0^0 ~ mat2) !! [0,0] == 8 
   assert' "matrix element increment" $ 
-    mat2 ?? [0,0] == 7 && ( 8^0^0 ~+ mat2) ?? [0,0] == 15 
+    mat2 !! [0,0] == 7 && ( 8^0^0 ~+ mat2) !! [0,0] == 15 
   assert' "matrix element scale" $ 
-    mat3 ?? [0,0] == 2%1 && ( (1%4)^0^0 ~* mat3) ?? [0,0] == 1%2 
+    mat3 !! [0,0] == 2%1 && ( (1%4)^0^0 ~* mat3) !! [0,0] == 1%2 
   assert' "matrix trace" $ trace mat3 == 10%1
-  assert' "matrix sum" $ (mat3 + mat4) ?? [2,2] == 14%1
-  assert' "matrix difference" $ (mat3 - mat4) ?? [2,2] == -4%1
+  assert' "matrix sum" $ (mat3 + mat4) !! [2,2] == 14%1
+  assert' "matrix difference" $ (mat3 - mat4) !! [2,2] == -4%1
   let m@(Matrix mat12) = mat1 * mat2
   assert' "matrix product" $ mat12.width == 1 
                          && mat12.height == 3 
-                         && m ?? [2,0] == 89
+                         && m !! [2,0] == 89
   assert' "square matrix ring determinant" $ ringDeterminant (transpose mat1 * mat1) == 24
   assert' "square matrix division-ring determinant" $ determinant mat4 == 36%1 
   let a = transpose mat3 - ((_ * (2%1)) <$> mat4)

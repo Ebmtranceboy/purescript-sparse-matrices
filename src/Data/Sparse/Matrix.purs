@@ -15,7 +15,7 @@ import Data.Sparse.Polynomial
   ( class Divisible
   , class Leadable
   , Polynomial (..)
-  , (?)
+  , (!)
   , (^)
   , roots
   , xchng
@@ -52,7 +52,7 @@ import Data.Tuple (Tuple (..))
 -- |  7.0 0.0
 -- |
 -- | > -- Coefficient extraction
--- | > c ?? [1,0]
+-- | > c !! [1,0]
 -- | 2.0
 -- |
 -- | > -- Column(s) extraction
@@ -120,11 +120,11 @@ newtype Matrix a =
 
 -- | Coefficient extraction
 extract :: forall a. Eq a => Semiring a => Matrix a -> Array Int -> a
-extract (Matrix m) [i, j] = m.coefficients ? j ? i
+extract (Matrix m) [i, j] = m.coefficients ! j ! i
 extract _ _ = zero
 
 -- | Coefficient extraction infix notation
-infixl 8 extract as ??
+infixl 8 extract as !!
 
 instance showMatrix :: 
   ( Show a
@@ -159,7 +159,7 @@ instance showMatrix ::
             | otherwise = " " <> show e
       in foldr (<>) "" $ map (\i -> 
            foldr (<>) "" $ map (\j -> 
-             showElem (mt ?? [i, j]) i j) 
+             showElem (mt !! [i, j]) i j) 
                (0..(m.width-1))) (0..(m.height-1))
     
 instance eqMatrix :: Eq a => Eq (Matrix a) where
@@ -182,7 +182,7 @@ transpose (Matrix m) =
     }
 
 trace :: forall a. Eq a => Semiring a => Square a -> a
-trace a@(Matrix m) = sum $ (\i -> a ?? [i,i]) <$> 0..(m.width-1)
+trace a@(Matrix m) = sum $ (\i -> a !! [i,i]) <$> 0..(m.width-1)
   
 instance semiringMatrix :: 
   ( Eq a
@@ -195,7 +195,7 @@ instance semiringMatrix ::
       , coefficients: a.coefficients + b.coefficients
       }
   zero = Matrix { height: 1, width: 1, coefficients: zero }
-  one = Matrix { height:1, width:1, coefficients: one }
+  one = Matrix { height: 1, width: 1, coefficients: one }
   mul (Matrix a) (Matrix b) =
     Matrix { height: a.height, width: b.width, coefficients: coeffs }
       where Poly columns = b.coefficients
@@ -205,7 +205,7 @@ instance semiringMatrix ::
                  Poly $ (fromFoldable :: Array (Tuple Int _) -> 
                     Map Int a) $ 
                    map (\(Tuple k u) -> Tuple k (u*v)) $ 
-                     toUnfoldable (internalMap $ a.coefficients ? i) 
+                     toUnfoldable (internalMap $ a.coefficients ! i) 
                      ) $ (toUnfoldable w :: Array (Tuple Int _)) 
                        ) $ (toUnfoldable columns :: 
                               Array (Tuple Int _))
@@ -226,10 +226,10 @@ parseMonom :: forall a.
   Poly2 a -> Maybe { i :: Int, j :: Int, v :: a }
 parseMonom r@(Poly p) =  
   let j = fromMaybe (-1) $ findMin $ keys p 
-      i = fromMaybe (-1) $ findMin $ keys $ internalMap $ r ? j
+      i = fromMaybe (-1) $ findMin $ keys $ internalMap $ r ! j
   in if i < 0 || j < 0
       then Nothing
-      else Just { i, j, v: r ? j ? i }
+      else Just { i, j, v: r ! j ! i }
  
 -- | Element replacement
 replace :: forall a. 
@@ -244,7 +244,7 @@ replace r a@(Matrix m) =
 replace' :: forall a. 
   Eq a => Semiring a =>
   Int -> Int -> a -> Poly2 a -> Poly2 a
-replace' i j v (Poly p) =  -- p + (- p ? j ? i + v)^i^j 
+replace' i j v (Poly p) =  -- p + (- p ! j ! i + v)^i^j 
   if v == zero
     then 
       Poly $
@@ -289,7 +289,7 @@ scale r a@(Matrix m) =
       a + Matrix 
         { height: m.height
         , width: m.width
-        , coefficients: (a??[i,j]*(v-one))^i^j
+        , coefficients: (a!![i,j]*(v-one))^i^j
         }
     ) $ parseMonom r
 
@@ -397,17 +397,18 @@ rowCombination orig ko dest kd m =
               }
    
 -- | Returns the row index of the maximum element (in magnitude) 
--- | among all the elements of the column whose index is provided 
--- | below (possibly as high as) the diagonal element.
+-- | among all the elements below (possibly as high as) the diagonal element
+-- | of the column whose index is provided.
 pivot :: forall a.
   Eq a =>
   Ord a =>
   Ring a =>
   Int -> Matrix a -> Int
-pivot col m =
-  foldr 
+pivot col m@(Matrix r) =
+  let column = r.coefficients ! col
+  in foldr 
     ( \i acc -> 
-        if abs(m ?? [i,col]) > abs(m ?? [acc,col]) 
+        if abs(column ! i) > abs(column ! acc) 
           then i 
           else acc
     ) col $ col..(height m - 1)
@@ -438,7 +439,7 @@ plu m =
                 goLU = 
                   foldr 
                     ( \k { l, u } ->
-                      let coef = u ?? [k,i] * (recip $ u ?? [i,i])
+                      let coef = u !! [k,i] * (recip $ u !! [i,i])
                       in 
                         { l: coef^k^i ~ l 
                         , u: rowCombination i (-coef) k one u 
@@ -458,16 +459,16 @@ pivot' :: forall a.
   Eq a =>
   Ord a =>
   Ring a =>
-  Int -> Int -> Matrix a -> Maybe Int
-pivot' i col m =
-  if i < height m
+  Int -> Int -> Polynomial a -> Maybe Int
+pivot' i h p =
+  if i < h
     then 
-      if m ?? [i,col] == zero 
-         then pivot' (i+1) col m 
+      if p ! i == zero 
+         then pivot' (i+1) h p 
          else Just i
     else Nothing
 
--- | Determinant of a square matrix in a ring
+  -- | Determinant of a square matrix in a ring
 ringDeterminant :: forall a. 
   Ring a => 
   Eq a => 
@@ -483,7 +484,7 @@ ringDeterminant m =
         | i == n  = 
             let d = rec.piv in if rec.perm then d else -d
         | otherwise = 
-            let mpiv = pivot' i i rec.m
+            let mpiv = pivot' i n (coefficients rec.m ! i)
             in 
               maybe 
                 zero 
@@ -495,7 +496,7 @@ ringDeterminant m =
                           ( \k m'' ->
                             foldr
                               (\l m''' ->
-                                replace' k l ((m''' ? i ? i * m''' ? l ? k - m''' ? i ? k * m''' ? l ? i) / rec.piv)
+                                replace' k l ((m''' ! i ! i * m''' ! l ! k - m''' ! i ! k * m''' ! l ! i) / rec.piv)
                                 m'''
                               ) m'' $ (i+1)..(n-1)
                           ) m' $ (i+1)..(n-1)
@@ -503,7 +504,7 @@ ringDeterminant m =
                     go 
                       { perm: p'
                       , m: Matrix { height: n, width: n, coefficients: goM }
-                      , piv: m' ? i ? i 
+                      , piv: m' ! i ! i 
                       } 
                       (i+1)
                   ) 
@@ -521,7 +522,7 @@ determinant :: forall a.
   Square a -> a
 determinant a@(Matrix m) =
   let { p: _p, parity, l: _l, u } = plu a
-      d = product $ map (\i -> u??[i,i]) $ 0..(m.width-1)
+      d = product $ map (\i -> u!![i,i]) $ 0..(m.width-1)
   in if parity then d else -d
 
 -- | Characteristic polynomial of a real square matrix
@@ -611,13 +612,13 @@ luSolve l u b =
       n = width b
       lSolve i j k acc ml
         | i == m = ml
-        | k == i = lSolve (i+1) j 0 zero ((b??[i,j]-acc)^i^j ~ ml)
-        | otherwise = lSolve i j (k+1) (acc + l??[i,k] * ml??[k,j]) ml
+        | k == i = lSolve (i+1) j 0 zero ((b!![i,j]-acc)^i^j ~ ml)
+        | otherwise = lSolve i j (k+1) (acc + l!![i,k] * ml!![k,j]) ml
       uSolve i j k acc ml mu
         | i < 0 = { ml, mu }
         | k == i = uSolve (i-1) j (m-1) zero ml 
-                          (((ml??[i,j]-acc) * (recip $ u??[i,i]))^i^j ~ mu)
-        | otherwise = uSolve i j (k-1) (acc + u??[i,k] * mu??[k,j]) ml mu
+                          (((ml!![i,j]-acc) * (recip $ u!![i,i]))^i^j ~ mu)
+        | otherwise = uSolve i j (k-1) (acc + u!![i,k] * mu!![k,j]) ml mu
       solve j ml mu  
         | j == n = mu
         | otherwise = 
